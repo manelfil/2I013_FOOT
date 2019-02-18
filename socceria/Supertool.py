@@ -182,7 +182,7 @@ class Fonceur_Strategy(Strategy):
             
         return action_1+action
 
-class Fonceur_passe_Strategy(Strategy):
+class Attaquant_Strategy(Strategy):
     def __init__(self):
         Strategy.__init__(self, "fonceur")
        
@@ -190,7 +190,13 @@ class Fonceur_passe_Strategy(Strategy):
         # id_team is 1 or 2
         # id_player starts at 0
         s= SuperState(state, id_team, id_player) #car on l'applique a s
+        action1=SoccerAction()
         
+        if(s.player.distance(s.ball)<settings.PLAYER_RADIUS+settings.BALL_RADIUS) and (s.fait_la_passe!=0):
+            action1=SoccerAction(shoot=s.fait_la_passe)
+        action2=SoccerAction(acceleration=s.ball-s.player)
+        
+        return action1+action2
         
         
 class Defenseur_Strategy(Strategy):   #socceraction: cours ou shoot
@@ -229,7 +235,7 @@ team2 = SoccerTeam(name="Team 2")
   #Random strategy
 team1.add("F1",Fonceur_Strategy()) 
 team2.add("D1",Defenseur_Strategy()) 
-team1.add("F2",Fonceur_Strategy()) 
+team2.add("F2",Attaquant_Strategy()) 
 team2.add("D2",Defenseur_Strategy())
  #Create a match
 simu = Simulation(team1, team2)
