@@ -38,12 +38,14 @@ class SuperState(object):
             return Vector2D(0,settings.GAME_HEIGHT/2)
         else:
             return Vector2D(settings.GAME_WIDTH,settings.GAME_HEIGHT/2)
+    
     @property    
     def dist_pb(self): #retourne la distance entre la ball et le joueur; Pas un vecteur
         return self.ball.distance(self.player)
 
   #  def angle_ball(self): #calcul l'angle de la ball selon sa position dans le terrain
-        
+
+###########################################################################    Differents Shoots        
         
     @property   
     def shoot_vers_balle(self): #joueur cours vers la balle
@@ -58,19 +60,33 @@ class SuperState(object):
         
         v1= self.goal-self.player
         return v1.normalize()*0.3
+###################################################################### Coequipier
     @property
     def liste_coequipier(self):
         return [self.state.player_state(id_team,id_player).position for (id_team, id_player) in self.state.players if id_team == self.id_team]
     
     @property
-    def coequipier_lePlusProche(self):#distance 
+    def dist_coequipier_lePlusProche(self):#distance 
         return min([(self.player.distance(player),player) for player in self.liste_coequipier])[0]
+    @property
+    def position_coequipier_lePlusProche(self):#distance 
+        v=Vector2D(0,0)
+        min_dist=settings.GAME_WIDTH*2
+        for k in self.liste_coequipier[0:-1]:
+            if(k.distance(self.player)<min_dist and k!=self.player):
+                min_dist=k.distance(self.player)
+                v=k
+        return v
+    
     
     @property
     def dist_CoequlePlusProche_de_balle(self):
-        return min([(self.player.distance(self.ball),player) for player in self.liste_coequipier])[0]
-        
-    
+        min_dist=settings.GAME_WIDTH*2
+        for k in self.liste_coequipier[0:-1]:
+            if(k.distance(self.ball)<min_dist and k!=self.player):
+                min_dist=k.distance(self.ball)
+        return min_dist
+#######################################################################  Opposant     
     @property
     def liste_op(self):
         return [self.state.player_state(id_team,id_player).position for (id_team, id_player) in self.state.players
@@ -80,7 +96,7 @@ class SuperState(object):
     def op_lePlusProche(self):
         return min([(self.player.distance(player),player) for player in self.liste_op])[0] #retourne la distance et
                                                                                            #le joueur equipe adverse le plus proche
-        
+######################################################################## utilisé dans Strategy Attaquant        
     @property
     def fait_la_passe(self): #des que op le plus proche est inf ou egal a une cste, fait la passe
     
@@ -89,22 +105,22 @@ class SuperState(object):
         cste_op=7 #cas ou le joueur et l'opposant sont vraiment tres proche a une distance precise
         cste_op2= 12 #pr 2eme cas: si l'oposant et trop proche on evalue la distance entre notre joueur et son coequipier
         cste_coequ=15
-        dist_self_coeq= self.player.distance(self.coequipier_lePlusProche)
+        dist_self_coeq= self.dist_coequipier_lePlusProche
     
         if(self.delimite_zone!=4):
             
             if(self.op_lePlusProche<cste_op): #qd opposant proche de note joueur
-                return self.coequipier_lePlusProche-self.player
+                return self.position_coequipier_lePlusProche-self.player
             
             elif(self.op_lePlusProche<cste_op2): #distance entre le joueur et l'opposant le plus proche
-                if(dist_self_coeq<cste_coequ and self.op_lePlusProche.distance(self.coequipier_lePlusProche)< dist_self_coeq):
+                if(dist_self_coeq<cste_coequ and self.op_lePlusProche.distance(self.dist_coequipier_lePlusProche)< dist_self_coeq):
                     #si la distance ente le joueur et le coequipier est inferieur a cste_op2
                     # et distance entre l'opposant le plus proche et le coequipier le plus proche < dist_self_coeq
-                        return self.coequipier_lePlusProche-self.player
+                        return self.position_coequipier_lePlusProche-self.player
                     #juste le vecteur pas encore l'action(SoccerAction)
         return Vector2D(0,0)
                 
-    
+########################################################################## delimite zones    
     @property
     def delimite_zone(self):
         
@@ -206,14 +222,14 @@ class Attaquant_Strategy(Strategy):
         action3=SoccerAction()
         
         if(s.player.distance(s.ball)>settings.PLAYER_RADIUS+settings.BALL_RADIUS):#court
-            if(s.dist_CoequlePlusProche_de_balle<s.dist_pb):#court vite vers la balle
+            if(s.dist_CoequlePlusProche_de_balle<s.dist_pb):#court vite vers la balle car coequipier loin de la balle
                 action2=SoccerAction(acceleration=s.ball-s.player)
-            else:
-                action3=SoccerAction(acceleration=(s.ball-s.player).normalize()*0.05)
+            else: # court moins vite
+                action3=SoccerAction(acceleration=(s.ball-s.player).normalize()*0.03)####probleme
         elif (s.fait_la_passe != Vector2D(0,0)):
             action1=SoccerAction(shoot=s.fait_la_passe)
         
-        return action1+action2+action3
+        return action1+action3+action2
         
         
 class Defenseur_Strategy(Strategy):   #socceraction: cours ou shoot
