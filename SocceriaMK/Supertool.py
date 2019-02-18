@@ -65,6 +65,7 @@ class SuperState(object):
     @property
     def coequipier_lePlusProche(self):#distance 
         return min([(self.player.distance(player),player) for player in self.liste_coequipier])[0]
+    
     @property
     def dist_CoequlePlusProche_de_balle(self):
         return min([(self.player.distance(self.ball),player) for player in self.liste_coequipier])[0]
@@ -240,20 +241,3 @@ class Defenseur_Strategy(Strategy):   #socceraction: cours ou shoot
             return SoccerAction(acceleration=s.retour_posDef-s.player)
             
         return SoccerAction()     
-                
-  
-team1 = SoccerTeam(name="Team 1")
-team2 = SoccerTeam(name="Team 2")
-
- #Add players
-  #Random strategy
-team1.add("F1",Fonceur_Strategy()) 
-team2.add("F2",Fonceur_Strategy())
-team2.add("D1",Defenseur_Strategy()) 
-team1.add("A1",Attaquant_Strategy()) 
-#team2.add("D2",Defenseur_Strategy())
- #Create a match
-simu = Simulation(team1, team2)
-#Simulate and display the match
-show_simu(simu) 
-    
