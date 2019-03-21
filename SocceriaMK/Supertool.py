@@ -26,6 +26,14 @@ class SuperState(object):
     @property
     def ball(self):
         return self.state.ball.position
+   
+    @property
+    def ball_norm(self):
+        return self.state.ball.position.norm
+    
+    @property
+    def ball_vitesse(self):
+        return self.state.ball.vitesse
 
     @property
     def player(self):
@@ -33,7 +41,6 @@ class SuperState(object):
 
     @property
     def goal(self):
-        
         if(self.id_team==2):
             return Vector2D(0,settings.GAME_HEIGHT/2)
         else:
@@ -44,6 +51,18 @@ class SuperState(object):
         return self.ball.distance(self.player)
 
   
+##########################################################################   Acceleration 
+        
+    @property   
+    def court_vers_balle_anticipation(self): 
+        
+        if(self.ball_norm<0.5):
+            return (self.ball+(self.ball_vitesse*(1*self.ball.distance(self.player))))-self.player
+        return (self.ball+(self.ball_vitesse*(0.5*self.ball.distance(self.player))))-self.player
+
+
+
+
 
 ###########################################################################    Differents Shoots        
         
@@ -70,6 +89,26 @@ class SuperState(object):
         return [self.state.player_state(id_team,id_player).position for (id_team, id_player) in self.state.players if id_team == self.id_team]
     
     @property
+    def liste_coequipier_player(self):
+        return [self.state.player_state(id_team,id_player) for (id_team, id_player) in self.state.players if id_team == self.id_team and id_player != self.id_player]
+    
+    @property
+    def liste_coequipier_player_ID(self):
+        return [(id_team,id_player) for (id_team, id_player) in self.state.players if id_team == self.id_team and id_player != self.id_player]
+    
+    @property
+    def coequipier_lePlusProche(self):#player 
+        cpt=-1
+        min_dist=settings.GAME_WIDTH*2
+        for k in self.liste_coequipier_player[0:-1]:
+            if(k.position.distance(self.player)<min_dist and k.position!=self.player):
+                min_dist=k.position.distance(self.player)
+                cpt=cpt+1
+                #print(self.liste_coequipier_player_ID[cpt])
+        return self.liste_coequipier_player_ID[cpt]
+#       
+    
+    @property
     def dist_coequipier_lePlusProche(self):#distance entre joueur et le coequip le + proche 
         return min([(self.player.distance(player),player) for player in self.liste_coequipier])[0]
    
@@ -81,7 +120,8 @@ class SuperState(object):
             if(k.distance(self.player)<min_dist and k!=self.player):
                 min_dist=k.distance(self.player)
                 v=k
-        return v
+        #return v
+        return self.state.player_state(self.coequipier_lePlusProche[0], self.coequipier_lePlusProche[1]).position
        
     @property
     def dist_CoequlePlusProche_de_balle(self):
@@ -229,10 +269,10 @@ class SuperState(object):
     @property
     def get_limite(self):#retourne la limite du terrain  
         if(self.id_team==1):
-            return settings.GAME_WIDTH/4
+            return settings.GAME_WIDTH/3
         
         elif(self.id_team==2):
-            return 3*settings.GAME_WIDTH/4
+            return 2*settings.GAME_WIDTH/3
 ############################################################################ fonctions utilisées dans les strategies defenseur         
 
 
@@ -344,7 +384,7 @@ class Attaquant_Strategy(Strategy):
         
 class Defenseur1_Strategy(Strategy):   #socceraction: cours ou shoot  shoot dans la balle #GARDIEN
     def __init__(self):
-        Strategy.__init__(self, "defenseur")    
+        Strategy.__init__(self, "defenseur1")    
     
     def compute_strategy(self, state, id_team, id_player):
         # id_team is 1 or 2
@@ -352,12 +392,12 @@ class Defenseur1_Strategy(Strategy):   #socceraction: cours ou shoot  shoot dans
         s= SuperState(state, id_team, id_player) 
         
      
-        action1= SoccerAction(acceleration=s.ball-s.player) #court vers la balle
-        action2=SoccerAction(shoot=s.shoot_vers_cages) #shoot vers la cage 
+        action1= SoccerAction(acceleration=s.ball-s.player) 
+        action2=SoccerAction(shoot=s.shoot_vers_cages) 
         
         
-        if(((s.id_team==1) and s.ball.x<(s.get_limite/2) and (s.goal.y-15)<s.player.y and s.player.y<(s.goal.y+15)) or (s.id_team==2 and (s.ball.x>(s.get_limite+(settings.GAME_WIDTH/8)) and (s.goal.y-15)<s.player.y and s.player.y<(s.goal.y+15)))): #si la balle est au 1/4 du terrain proche des cages    
-            return action1+ action2  #getlimite= 1/2 du 1/4 pres des cages
+        if(((s.id_team==1) and s.ball.x<(s.get_limite/2) and (s.goal.y-15)<s.ball.y and s.ball.y<(s.goal.y+15)) or (s.id_team==2 and (s.ball.x>(s.get_limite+(settings.GAME_WIDTH/3)) and (s.goal.y-15)<s.ball.y and s.ball.y<(s.goal.y+15)))):   
+            return action1+ action2  
         else:
             return SoccerAction(acceleration=s.retour_posDef-s.player)
         return SoccerAction()     
@@ -374,24 +414,26 @@ class Defenseur2_Strategy(Strategy):   #socceraction: cours ou shoot  #fait la p
         # id_player starts at 0
         s= SuperState(state, id_team, id_player)
         
+       # print(s.state.strategies)
        
-        #action1= SoccerAction(acceleration=(s.ball+s.ball.norm*(5*s.ball.distance(s.player)))-s.player)#ball-s.player #court vers la balle
-        action4= SoccerAction(acceleration=(s.ball-s.player)) #court vers la balle
-        action2=SoccerAction(shoot=s.shoot_vers_cages) #shoot vers la cage
-        action3=SoccerAction(shoot=s.position_coequipier_lePlusProche-s.player)#shoot vers coequipier le + proche 
-        #si la balle est au 1/4 du terrain proche des cages, zone pour laquelle le defenseur doit reagir
+        action1= SoccerAction(acceleration=(s.court_vers_balle_anticipation))
         
+        action2=SoccerAction(shoot=s.shoot_vers_cages) 
+       # action3=SoccerAction(shoot=s.position_coequipier_lePlusProche-s.player)#shoot vers coequipier le + proche 
+       # print(s.state.strategies.keys())
+        #print(s.state.strategies[(s.id_team,s.id_player)])
+        #si la balle est au 1/3 du terrain proche des cages, zone pour laquelle le defenseur doit reagir
         
-        if((s.ball.x<s.get_limite and s.id_team==1) or (s.ball.x>s.get_limite and s.id_team==2) ):  
-            if(s.dist_coequipier_lePlusProche<s.op_lePlusProche and s.ball.distance(s.player)<s.ball.distance(s.position_opposant_lePlusProche)): 
+        if((s.ball.x<s.get_limite and s.id_team==1) or (s.ball.x>s.get_limite and s.id_team==2) ): 
+            if((s.dist_coequipier_lePlusProche<s.op_lePlusProche and s.ball.distance(s.player)<s.ball.distance(s.position_opposant_lePlusProche)) and s.state.strategies[(s.coequipier_lePlusProche[0]-1,s.coequipier_lePlusProche[1])]!= "defenseur1"): 
                 # defenseur + proche de son coequipier que l'opposant ET la balle + proche du defenseur que l'opposant
-                
                 #if(s.id_player!=2) #if le coequipier est un defenseur1 on fait pas de passes
-                return action4+ action3 # defenseur court vers la balle et ensuite shout vers le coequipier + proche 
-            return action4 + action2# sinon il court et et shoot vers la cage de l'autre côté du terrain 
+               # print(s.coequipier_lePlusProche)
+                return action1+ SoccerAction(shoot=s.position_coequipier_lePlusProche-s.player) # defenseur court vers la balle et ensuite shout vers le coequipier + proche 
+            return action1 + action2# sinon il court et et shoot vers la cage de l'autre côté du terrain 
         # sinon le defenseur revient a sa position dans la cage 
         else:
-            return SoccerAction(acceleration=s.pos_defenseur-s.player) #s.pos: la position ou doit se player le player != de s.player qui est la position ou il est deja
+            return SoccerAction(acceleration=s.pos_defenseur-s.player) #s.pos: la position ou doit se placer le player != de s.player qui est la position ou il est deja
             
         return SoccerAction()     
 

@@ -1,4 +1,4 @@
-from SocceriaMK.Supertool import RandomStrategy,Fonceur_Strategy,Defenseur2_Strategy
+from SocceriaMK.Supertool import RandomStrategy,Fonceur_Strategy,Defenseur2_Strategy,Defenseur1_Strategy,Attaquant_Strategy
 from soccersimulator import SoccerTeam
 
 def get_team(nb_players):
@@ -7,8 +7,15 @@ def get_team(nb_players):
         print("team created")
         team.add("Striker",Fonceur_Strategy())
     if(nb_players==2):
-        team.add("Random",Defenseur2_Strategy())
+        team.add("defenseur",Defenseur2_Strategy())
         team.add("Striker",Fonceur_Strategy())
+    if(nb_players==4):
+        team.add("def2",Defenseur2_Strategy())
+        team.add("fncr",Fonceur_Strategy())
+        team.add("def1",Defenseur1_Strategy())
+        team.add("attq",Attaquant_Strategy())
+        
+        
         
 
     return team

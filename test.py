@@ -11,9 +11,9 @@ team2 = SoccerTeam(name="Team 2")
  #Add players
 
 team1.add("F1",Fonceur_Strategy()) 
-team1.add("D1-1",Defenseur1_Strategy()) 
+#team1.add("D1-1",Defenseur1_Strategy()) 
 team1.add("D1-2",Defenseur2_Strategy()) 
-#team1.add("A1",Attaquant_Strategy()) 
+team1.add("A1",Attaquant_Strategy()) 
 
 #team2.add("F2",Fonceur_Strategy())
 team2.add("D2-1",Defenseur1_Strategy()) 
