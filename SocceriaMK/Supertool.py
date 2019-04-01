@@ -12,7 +12,7 @@ from soccersimulator import settings
 import math
 import random
 from soccersimulator import Strategy, SoccerAction, Vector2D, SoccerTeam, Simulation, show_simu
-
+#from SocceriaMK import GoalSearch, GoTestStrategy
 
 class SuperState(object):
     def __init__(self,state,id_team,id_player):
@@ -95,24 +95,9 @@ class SuperState(object):
         return [(id_team,id_player) for (id_team, id_player) in self.state.players if id_team == self.id_team and id_player != self.id_player]
     
     @property
-    def coequipier_seul(self):#player 
-        cpt=-1
-        coequipier=-10
-        cst=30
-        for coeq in self.liste_coequipier_player[0:-1]:
-            cpt=cpt+1
-            for opp in self.liste_opposant_player[0:-1]:
-                    if(coeq.position.distance(opp.position)>cst):
-                        coequipier=cpt #coequipier a qui on fait la passe car il n'a pas d'opposant proche de lui
-            
-           
-        if(coequipier!=-10):  
-            return self.liste_coequipier_player_ID[coequipier]
-        return coequipier
+    def playerID(self):
+        return (self.id_team,self.id_player)
     
-    @property
-    def position_coequipier_seul(self):#position  
-        return self.state.player_state(self.coequipier_seul[0], self.coequipier_seul[1]).position
     
     @property
     def coequipier_lePlusProche(self):#player 
@@ -126,6 +111,36 @@ class SuperState(object):
         return self.liste_coequipier_player_ID[cpt]      
     
     
+    
+    @property
+    def coequipier_seul(self):#player 
+        cpt=-1
+        bool=1
+        coequipier=-10
+        cst=30
+        for coeq in self.liste_coequipier_player:
+            cpt=cpt+1
+            bool=1
+            for opp in self.liste_opposant_player:
+                
+                if(coeq.position.distance(opp.position)<cst):
+                    bool=0
+            if(bool==1):
+                coequipier=cpt
+          
+        
+        
+       # print(cpt)  
+        if(coequipier!= -10):  
+           # print(self.liste_coequipier_player_ID[coequipier])
+            return self.liste_coequipier_player_ID[coequipier] #coequipier a qui on fait la passe car il n'a pas d'opposant proche de lui
+        return self.playerID
+    
+    @property
+    def position_coequipier_seul(self):#position  
+        return self.state.player_state(self.coequipier_seul[0], self.coequipier_seul[1]).position
+    
+
     @property
     def dist_coequipier_lePlusProche(self):#distance entre joueur et le coequip le + proche 
         return min([(self.player.distance(player),player) for player in self.liste_coequipier])[0]
@@ -164,7 +179,7 @@ class SuperState(object):
     
     @property
     def op_lePlusProche(self):# distance de l'opposant le + proche 
-        return min([(self.player.distance(player),player) for player in self.liste_op])[0] #retourne la distance et
+        return min([(self.player.distance(player),player) for player in self.liste_op])[0] 
                      
 
 
@@ -253,7 +268,7 @@ class SuperState(object):
                         return (self.shoot_vers_cages).normalize()*0.5
                 else: #fait la passe 
                     if(self.op_lePlusProche> cste_op and self.dist_coequipier_lePlusProche<cste_def and self.position_coequipier_lePlusProche.distance(self.position_opposant_lePlusProche)>cste3):####### modifier la condition 
-                        print("passe")
+                        #print("passe")
                         return (self.position_coequipier_lePlusProche-self.player).normalize()*0.5  # Vector2D entre le joueur le coequip le +proche  normalisé et... 
                         
             
@@ -440,6 +455,7 @@ class Defenseur2_Strategy(Strategy):   #socceraction: cours ou shoot  #fait la p
         # id_team is 1 or 2
         # id_player starts at 0
         s= SuperState(state, id_team, id_player)
+       # print(s.state.strategies)
         
        # print(s.state.strategies)
        
@@ -457,7 +473,8 @@ class Defenseur2_Strategy(Strategy):   #socceraction: cours ou shoot  #fait la p
                # print(s.coequipier_lePlusProche)
                 return action1+ SoccerAction(shoot=s.position_coequipier_lePlusProche-s.player) # defenseur court vers la balle et ensuite shout vers le coequipier + proche 
             
-            elif((s.coequipier_seul!=-10 and s.state.strategies[(s.coequipier_seul[0]-1,s.coequipier_seul[1])]!= "defenseur1") and s.position_coequipier_seul.distance(s.player)<50):  
+            elif((s.coequipier_seul!=-10 and s.state.strategies[(s.coequipier_seul[0]-1,s.coequipier_seul[1])]!= "defenseur1") and s.position_coequipier_seul.distance(s.player)<50):  # s.state.strategie: dico qui contient toutes les strategies
+                
                 return action1+SoccerAction(shoot=s.position_coequipier_seul-s.player) 
             else:    
                 return action1 + action2# sinon il court et et shoot vers la cage de l'autre côté du terrain 
@@ -500,7 +517,7 @@ class Fonceur2_Strategy(Strategy):
                 action3=SoccerAction(shoot=s.shoot_vers_cages)
                 #shoot moins fort
         elif(s.ball.x<settings.GAME_WIDTH/2 and s.id_team==2):
-            if(s.position_coequipier_lePlusProche.x<settings.GAME_WIDTH/3 and s.position_coequipier_seul.distance(s.player)<50):
+            if(s.position_coequipier_lePlusProche.x<(1/3)*settings.GAME_WIDTH and s.position_coequipier_seul.distance(s.player)<50):
                 x=(s.position_coequipier_seul.x+s.goal.x)/2
                 y=(s.position_coequipier_seul.y+s.goal.y)/2
                 v=Vector2D(x,y)
@@ -522,7 +539,8 @@ class Attaquant2_Strategy(Strategy):
     def compute_strategy(self, state, id_team, id_player):
         # id_team is 1 or 2
         # id_player starts at 0
-        s= SuperState(state, id_team, id_player) 
+        s= SuperState(state, id_team, id_player)
+        #print(s.state.strategies)
         action1=SoccerAction()
         action2=SoccerAction()
         action3=SoccerAction()
@@ -548,7 +566,10 @@ class Attaquant2_Strategy(Strategy):
                     if(s.position_coequipier_lePlusProche.distance(s.player)<20 ):
                         action3=SoccerAction(acceleration=((s.ball-s.player).normalize())*1)# court  vite
                     else:
-                        if(s.coequipier_seul!=-10 and s.state.strategies[(s.coequipier_seul[0]-1,s.coequipier_seul[1])]!= "defenseur1"):
+                        if(s.state.strategies=={}):
+                            action4=SoccerAction(acceleration=s.ball-s.player)
+                            
+                        elif(s.coequipier_seul!=s.playerID and s.state.strategies[(s.coequipier_seul[0]-1,s.coequipier_seul[1])]!= "defenseur1"):
                             action4= SoccerAction(acceleration=s.ball-s.player,shoot=s.position_coequipier_seul-s.player)
                         else:
                             action6=SoccerAction(acceleration=s.ball-s.player,shoot=(s.shoot_vers_cages).normalize()*0.7)
@@ -575,6 +596,156 @@ class Attaquant2_Strategy(Strategy):
     
     
     
-    
+#
+#class GoalSearch( object ):
+#
+#    def __init__(self, strategy, params, simu=None, trials=20, max_steps=1000000, max_round_step=40):
+#        self.strategy = strategy
+#        self.params = params.copy()
+#        self.trials = trials
+#        self.max_steps = max_steps
+#        self.max_round_step = max_round_step
+#        self.simu = simu
+#       
+#      
+#    def start(self, show=True):
+#        if not self.simu:
+#            team1 = SoccerTeam("Team 1")
+#            team2 = SoccerTeam("Team 2")
+#            team1.add(self.strategy.name, self.strategy)
+#            team2.add(Strategy().name, Strategy())
+#            self.simu = Simulation(team1, team2, max_steps=self.max_steps)
+#        self.simu.listeners += self  
+#        if show:
+#            show_simu(self.simu)
+#                
+#        else:
+#            self.simu.start()
+#              
+#
+#                       
+#       
+#    def begin_match( self, team1 , team2 , state ):
+#          self.last_step = 0 # Step of the last round
+#          self.criterion = 0 # Criterion to maximize ( here , number of goals )
+#          self.cpt_trials = 0 # Counter for trials
+#          self.param_grid = iter(ParameterGrid(self.params)) # Iterator for the g
+#          self.cur_param = next(self.param_grid, None) # Current parameter
+#          if self.cur_param is None :
+#              raise ValueError(' no parameter given. ')
+#          self.res = dict() # Dictionary of results
+#       
+#    def begin_round(self, team1, team2, state):
+#        ball = Vector2D.create_random (low =0, high =1)
+#       ######################"""completer
+#        ball.y= ball.y*GAME_HEIGHT 
+#        ball.x= ball.x*GAME_WIDTH # pour que x de la ball soit possible sur tout le terrain (si on fait G_W/2: que sur la moitié du terrain que se sera possible)
+#        #Player and ball postion ( random )
+#        self.simu.state.states[(1,0)].position = ball.copy() # Player position
+#        self.simu.state.states[(1,0)].vitesse = Vector2D() # Player accelerati
+#        self.simu.state.ball.position = ball.copy() # Ball position
+#       
+#        self.last_step = self.simu.step
+#       
+#        #Last step of the game
+#        #Set the current value for the current parameters
+#        
+#        for key,value in self.cur_param.items():
+#            setattr(self.strategy,key,value)
+#       
+#       
+#        
+#       
+#    def end_round(self, team1, team2, state ):
+#        # A round ends when there is a goal of if max step is achieved
+#        if state.goal > 0:
+#            self.criterion += 1 #Increment criterion    
+#            self.cpt_trials += 1  #Increment number of trials
+#        
+#        print(self.cur_param, end = " ␣ ␣ ␣ ␣ " )
+#        print(" Crit : ␣ {} ␣ ␣ ␣ Cpt : ␣ {} ".format(self.criterion, self.cpt_trial))
+#        if self.cpt_trials >= self.trials :
+#            # Save the result
+#            self.res[tuple(self.cur_param.items())] = self.criterion*1./self.cpt_trials
+#        
+#        # Reset parameters
+#        self.criterion = 0
+#        self.cpt_trials = 0
+#        
+#        # Next parameter value
+#        self.cur_param = next( self.param_grid, None )
+#        if self.cur_param is None :
+#            self.simu.end_match()
+#       
+#    
+#    def update_round(self, team1, team2, state):
+#        # Stop the round if it is too long
+#        if state.step > self.last_step + self.max_round_step :
+#            self.simu.end_round()
+#       
+#           
+#    def get_res(self):
+#        return self.res
+#       
+#    def get_best(self):
+#        return max(self.res, key = self.res.get)
+#       
+#       
+#
+#
+#class GoTestStrategy ( Strategy ):
+#    def __init__(self, strength=None):
+#        Strategy.__init__(self, " Go - getter " )
+#        self.strength = strength
+#    def compute_strategy(self, state, id_team, id_player):
+#        s = SuperState(state, id_team, id_player)
+#        move = Move(s)
+#        shoot = Shoot(s)
+#        return move.to_ball() + shoot.to_goal(self.strength)
+#
+#
+#expe =GoalSearch(strategy=GoTestStrategy(), params={"strength":[0.1,1]})
+#expe.start()
+#print(expe.get_res())
+#print(expe.get_best())      
+#
+#       
+#       
+#       
+#       
+#       
+#       
+#       
+#       
+#       
+#       
+#       
+#       
+#team3 = SoccerTeam(name="Team test")
+# #Add players
+#
+##team1.add("F1",Fonceur2_Strategy()) 
+##team1.add("D1-1",Defenseur1_Strategy()) 
+##team1.add("D1-2",Defenseur2_Strategy()) 
+##team1.add("A1",Attaquant2_Strategy()) 
+##
+##
+##team2.add("D2-2",Defenseur2_Strategy()) 
+##team2.add("A2",Attaquant2_Strategy()) 
+###team2.add("F2",Fonceur_Strategy())
+###team2.add("A2",Attaquant_Strategy()) 
+##team2.add("F2-1",Fonceur2_Strategy())
+##team2.add("D2-1",Defenseur1_Strategy()) 
+##   
+#team3.add("test",GoTestStrategy())
+#
+#simu1=(team3)
+# #Create a match
+##simu = Simulation(team1, team2)
+##Simulate and display the match
+##show_simu(simu) 
+#show_simu(simu1) 
+#       
+#       
     
     

@@ -10,12 +10,10 @@ def get_team(nb_players):
         team.add("defenseur",Defenseur2_Strategy())
         team.add("Striker",Fonceur_Strategy())
     if(nb_players==4):
-        team.add("def2",Defenseur2_Strategy())
-        team.add("fncr",Fonceur2_Strategy())
         team.add("def1",Defenseur1_Strategy())
         team.add("attq",Attaquant2_Strategy())
-        
-        
+        team.add("fncr",Fonceur2_Strategy())
+        team.add("def2",Defenseur2_Strategy())
         
 
     return team
